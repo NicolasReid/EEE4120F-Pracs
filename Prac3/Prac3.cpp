@@ -36,7 +36,8 @@
 
 //---------- STUDENT NUMBERS --------------------------------------------------
 //
-// Please note:  put your student numbers here !!  <<<< NB!  NB!
+// Nicolas Reid - [RDXNIC008]
+// Callum Tilbury - [TLBCAL002]
 //
 //-----------------------------------------------------------------------------
 
@@ -86,18 +87,30 @@ void Master () {
 
  // This is example code of how to copy image files ----------------------------
  printf("Start of example code...\n");
- for(j = 0; j < 10; j++){
+ for(j = 0; j < 1; j++){
   tic();
   int x, y;
   for(y = 0; y < Input.Height; y++){
    for(x = 0; x < Input.Width*Input.Components; x++){
     Output.Rows[y][x] = Input.Rows[y][x];
+    printf(" %u ", Output.Rows[x][y]);
    }
+   printf("\n");
   }
   printf("Time = %lg ms\n", (double)toc()/1e-3);
  }
- printf("End of example code...\n\n");
- // End of example -------------------------------------------------------------
+ /*printf("End of example code...\n\n");
+ printf("%u\n", Output.Rows[10][10]);
+ printf("%u\n", Output.Rows[10][11]);
+ printf("%u\n", Output.Rows[10][12]);
+ printf("%u\n", Output.Rows[10][13]);
+ printf("%u\n", Output.Rows[10][14]);
+ printf("%u\n", Output.Rows[10][15]);
+ printf("%u\n", Output.Rows[10][16]);
+ printf("%u\n", Output.Rows[10][17]);
+ printf("%u\n", Output.Rows[10][18]);
+ printf("%u\n", Output.Rows[10][19]);*/
+ // // End of example -------------------------------------------------------------
 
  // Write the output image
  if(!Output.Write("Data/Output.jpg")){
