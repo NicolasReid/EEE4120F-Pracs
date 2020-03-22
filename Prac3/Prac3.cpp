@@ -61,7 +61,7 @@ void Master () {
  MPI_Status stat;    //! stat: Status of the MPI application
 
  // Start of "Hello World" example..............................................
- printf("0: We have %d processors\n", numprocs);
+/* printf("0: We have %d processors\n", numprocs);
  for(j = 1; j < numprocs; j++) {
   sprintf(buff, "Hello %d! ", j);
   MPI_Send(buff, BUFSIZE, MPI_CHAR, j, TAG, MPI_COMM_WORLD);
@@ -73,7 +73,7 @@ void Master () {
   // slave, instead of a specific one only.
   MPI_Recv(buff, BUFSIZE, MPI_CHAR, j, TAG, MPI_COMM_WORLD, &stat);
   printf("0: %s\n", buff);
- }
+ }*/
  // End of "Hello World" example................................................
 
  // Read the input image
@@ -84,33 +84,53 @@ void Master () {
 
  // Allocated RAM for the output image
  if(!Output.Allocate(Input.Width, Input.Height, Input.Components)) return;
+ // Variables to store the partitioned RGB components
+ unsigned char reds[Input.Width*Input.Components/3];
+ unsigned char greens[Input.Width*Input.Components/3];
+ unsigned char blues[Input.Width*Input.Components/3];
 
+ // Itterate through rows of the input image
+ for(int y = 0; y < Input.Height; y++){
+  // Run through RGB pixel elements in each row and separate the components
+  for(int x = 0; x < Input.Width*Input.Components; x+=3){
+   reds[x] = Input.Rows[y][x];
+   greens[x] = Input.Rows[y][x+1];
+   blues[x] = Input.Rows[y][x+2];
+  }
+  // Send partitioned data to slaves
+  MPI_Send(reds, BUFSIZE, MPI_CHAR, 1, TAG, MPI_COMM_WORLD);
+  MPI_Send(greens, BUFSIZE, MPI_CHAR, 2, TAG, MPI_COMM_WORLD);
+  MPI_Send(blues, BUFSIZE, MPI_CHAR, 3, TAG, MPI_COMM_WORLD);
+
+  // Receive filtered data from slaves
+  MPI_Recv(redsOut, BUFSIZE, MPI_CHAR, 1, TAG, MPI_COMM_WORLD, &stat);
+  MPI_Recv(greensOut, BUFSIZE, MPI_CHAR, 2, TAG, MPI_COMM_WORLD, &stat);
+  MPI_Recv(bluesOut, BUFSIZE, MPI_CHAR, 3, TAG, MPI_COMM_WORLD, &stat);
+
+  // Re-organise the RGB components into the output image rows
+  for(int x = 0; x < Input.Width*Input.Components; x+=3){
+   Output.Rows[y][x] = redsOut[x];
+   Output.Rows[y][x+1] = redsOut[x];
+   Output.Rows[y][x+2] = bluesOut[x];
+  }
+ }
  // This is example code of how to copy image files ----------------------------
+/*
  printf("Start of example code...\n");
  for(j = 0; j < 1; j++){
   tic();
   int x, y;
   for(y = 0; y < Input.Height; y++){
-   for(x = 0; x < Input.Width*Input.Components; x++){
+   for(x = 0; x < Input.Width*Input.Components; x+=3){
     Output.Rows[y][x] = Input.Rows[y][x];
-    printf(" %u ", Output.Rows[x][y]);
    }
-   printf("\n");
   }
   printf("Time = %lg ms\n", (double)toc()/1e-3);
  }
- /*printf("End of example code...\n\n");
- printf("%u\n", Output.Rows[10][10]);
- printf("%u\n", Output.Rows[10][11]);
- printf("%u\n", Output.Rows[10][12]);
- printf("%u\n", Output.Rows[10][13]);
- printf("%u\n", Output.Rows[10][14]);
- printf("%u\n", Output.Rows[10][15]);
- printf("%u\n", Output.Rows[10][16]);
- printf("%u\n", Output.Rows[10][17]);
- printf("%u\n", Output.Rows[10][18]);
- printf("%u\n", Output.Rows[10][19]);*/
- // // End of example -------------------------------------------------------------
+ printf("End of example code...\n\n");
+ printf("%d", Input.Components);
+*/
+ // End of example -------------------------------------------------------------
 
  // Write the output image
  if(!Output.Write("Data/Output.jpg")){
@@ -132,10 +152,12 @@ void Slave(int ID){
 
  // receive from rank 0 (master):
  // This is a blocking receive, which is typical for slaves.
- MPI_Recv(buff, BUFSIZE, MPI_CHAR, 0, TAG, MPI_COMM_WORLD, &stat);
- sprintf(idstr, "Processor %d ", ID);
- strncat(buff, idstr, BUFSIZE-1);
- strncat(buff, "reporting for duty", BUFSIZE-1);
+ MPI_Recv(rgbIn, BUFSIZE, MPI_CHAR, 0, TAG, MPI_COMM_WORLD, &stat);
+ 
+
+ //sprintf(idstr, "Processor %d ", ID);
+ //strncat(buff, idstr, BUFSIZE-1);
+ //strncat(buff, "reporting for duty", BUFSIZE-1);
 
  // send to rank 0 (master):
  MPI_Send(buff, BUFSIZE, MPI_CHAR, 0, TAG, MPI_COMM_WORLD);
