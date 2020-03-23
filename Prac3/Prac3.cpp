@@ -68,18 +68,21 @@ void Master () {
 
  // Allocated RAM for the output image
  if(!Output.Allocate(Input.Width, Input.Height, Input.Components)) return;
- printf("\ncheck1\n");
- // Variables to store the partitioned RGB components
- unsigned char reds[Input.Height][Input.Width*Input.Components/3];
- printf("\ncheck2\n");
- unsigned char greens[Input.Height][Input.Width*Input.Components/3];
- printf("\ncheck3\n");
- unsigned char blues[Input.Height][Input.Width*Input.Components/3];
- printf("\ncheck4\n");
- int i;
- printf("\ncheck5\n");
+
+ // Allocate memory for variables to store the partitioned RGB components
+ int height = Input.Height;
+ int width = Input.Width*Input.Components/3;
+ unsigned char** reds = new unsigned char*[height];
+ unsigned char** greens = new unsigned char*[height];
+ unsigned char** blues = new unsigned char*[height];
+ for(int i = 0; i < height; ++i){
+  reds[i] = new unsigned char[width];
+  greens[i] = new unsigned char[width];
+  blues[i] = new unsigned char[width];
+ }
 
  // Itterate through rows of the input image
+ int i;
  for(int y = 0; y < Input.Height; y++){
   // Run through RGB pixel elements in each row and separate the components
   i = 0;
@@ -93,16 +96,16 @@ void Master () {
  printf("Partitioning complete.\n");
 
  // Send dimention info to slaves
- int size[2] = {Input.Height, Input.Width*Input.Components/3};
- MPI_Send(size, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
- MPI_Send(size, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
- MPI_Send(size, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
+ int size[2] = {height, width};
+ MPI_Send(size, 2, MPI_INT, 1, TAG, MPI_COMM_WORLD);
+ MPI_Send(size, 2, MPI_INT, 2, TAG, MPI_COMM_WORLD);
+ MPI_Send(size, 2, MPI_INT, 3, TAG, MPI_COMM_WORLD);
  printf("Sent dimention info.\n");
 
  // Send partitioned data to slaves 1, 2, 3
- MPI_Send(reds, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
- MPI_Send(greens, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
- MPI_Send(blues, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
+ MPI_Send(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
+ MPI_Send(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
+ MPI_Send(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
  printf("Sent rgb data.\n");
 
  // Receive filtered data from slaves 1, 2, 3
@@ -139,6 +142,8 @@ void Slave(int ID){
 
  MPI_Status stat;
 
+ printf("Processor %d reporting for duty.\n", ID);
+
  // Bollking receive from rank 0 (master):
  // Recieve dimention info
  MPI_Recv(size, 2, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
@@ -148,13 +153,8 @@ void Slave(int ID){
 
  //Recieve r/g/b input data
  unsigned char rgbIn[height][width];
- MPI_Recv(rgbIn, height*width, MPI_CHAR, 0, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(rgbIn, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD, &stat);
  printf("%d: Recieved rgb data.\n", ID);
- 
-
- //sprintf(idstr, "Processor %d ", ID);
- //strncat(buff, idstr, BUFSIZE-1);
- //strncat(buff, "reporting for duty", BUFSIZE-1);
 
  // send to rank 0 (master):
  //MPI_Send(buff, BUFSIZE, MPI_CHAR, 0, TAG, MPI_COMM_WORLD);           }}}}}}}}}}}}}
