@@ -60,22 +60,6 @@ void Master () {
  char buff[BUFSIZE]; //! buff: Buffer for transferring message data
  MPI_Status stat;    //! stat: Status of the MPI application
 
- // Start of "Hello World" example..............................................
-/* printf("0: We have %d processors\n", numprocs);
- for(j = 1; j < numprocs; j++) {
-  sprintf(buff, "Hello %d! ", j);
-  MPI_Send(buff, BUFSIZE, MPI_CHAR, j, TAG, MPI_COMM_WORLD);
- }
- for(j = 1; j < numprocs; j++) {
-  // This is blocking: normally one would use MPI_Iprobe, with MPI_ANY_SOURCE,
-  // to check for messages, and only when there is a message, receive it
-  // with MPI_Recv.  This would let the master receive messages from any
-  // slave, instead of a specific one only.
-  MPI_Recv(buff, BUFSIZE, MPI_CHAR, j, TAG, MPI_COMM_WORLD, &stat);
-  printf("0: %s\n", buff);
- }*/
- // End of "Hello World" example................................................
-
  // Read the input image
  if(!Input.Read("Data/greatwall.jpg")){
   printf("Cannot read image\n");
@@ -84,12 +68,16 @@ void Master () {
 
  // Allocated RAM for the output image
  if(!Output.Allocate(Input.Width, Input.Height, Input.Components)) return;
-
+ printf("\ncheck1\n");
  // Variables to store the partitioned RGB components
  unsigned char reds[Input.Height][Input.Width*Input.Components/3];
+ printf("\ncheck2\n");
  unsigned char greens[Input.Height][Input.Width*Input.Components/3];
+ printf("\ncheck3\n");
  unsigned char blues[Input.Height][Input.Width*Input.Components/3];
+ printf("\ncheck4\n");
  int i;
+ printf("\ncheck5\n");
 
  // Itterate through rows of the input image
  for(int y = 0; y < Input.Height; y++){
@@ -102,25 +90,28 @@ void Master () {
    i++;
   }
  }
+ printf("Partitioning complete.\n");
 
  // Send dimention info to slaves
  int size[2] = {Input.Height, Input.Width*Input.Components/3};
  MPI_Send(size, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(size, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(size, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
+ printf("Sent dimention info.\n");
 
  // Send partitioned data to slaves 1, 2, 3
  MPI_Send(reds, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(greens, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(blues, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
+ printf("Sent rgb data.\n");
 
  // Receive filtered data from slaves 1, 2, 3
- MPI_Recv(redsOut, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
- MPI_Recv(greensOut, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
- MPI_Recv(bluesOut, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);
+ //MPI_Recv(redsOut, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
+ //MPI_Recv(greensOut, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
+ //MPI_Recv(bluesOut, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);        }}}}}}}}}}}}}}
 
  // Re-organise the RGB components into the output image rows
- for(int y = 0; y < Input.Height; y++){
+ /*for(int y = 0; y < Input.Height; y++){
   i = 0;
   for(int x = 0; x < Input.Width*Input.Components; x+=3){
    Output.Rows[y][x] = redsOut[y][i];
@@ -128,7 +119,7 @@ void Master () {
    Output.Rows[y][x+2] = bluesOut[y][i];
    i++;
   }
- }
+ }*/               // }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 
  // Write the output image
  if(!Output.Write("Data/Output.jpg")){
@@ -151,13 +142,14 @@ void Slave(int ID){
  // Bollking receive from rank 0 (master):
  // Recieve dimention info
  MPI_Recv(size, 2, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
+ printf("%d: Recieved dimention info.\n", ID);
  int height = size[0];
  int width = size[1];
 
  //Recieve r/g/b input data
  unsigned char rgbIn[height][width];
  MPI_Recv(rgbIn, height*width, MPI_CHAR, 0, TAG, MPI_COMM_WORLD, &stat);
-
+ printf("%d: Recieved rgb data.\n", ID);
  
 
  //sprintf(idstr, "Processor %d ", ID);
@@ -165,7 +157,7 @@ void Slave(int ID){
  //strncat(buff, "reporting for duty", BUFSIZE-1);
 
  // send to rank 0 (master):
- MPI_Send(buff, BUFSIZE, MPI_CHAR, 0, TAG, MPI_COMM_WORLD);
+ //MPI_Send(buff, BUFSIZE, MPI_CHAR, 0, TAG, MPI_COMM_WORLD);           }}}}}}}}}}}}}
  // End of "Hello World" example................................................
 }
 //------------------------------------------------------------------------------
