@@ -103,10 +103,11 @@ void Master () {
   }
  }
 
- // Send size data to slaves
- MPI_Send(reds, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
- MPI_Send(greens, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
- MPI_Send(blues, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
+ // Send dimention info to slaves
+ int size[2] = {Input.Height, Input.Width*Input.Components/3};
+ MPI_Send(size, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
+ MPI_Send(size, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
+ MPI_Send(size, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
 
  // Send partitioned data to slaves 1, 2, 3
  MPI_Send(reds, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
@@ -142,13 +143,20 @@ void Master () {
 /** This is the Slave function, the workers of this MPI application. */
 void Slave(int ID){
  char idstr[32];
- int 
+ int size[2];
+ int window = 30;
 
  MPI_Status stat;
 
- // receive from rank 0 (master):
- // This is a blocking receive, which is typical for slaves.
- MPI_Recv(rgbIn, BUFSIZE, MPI_CHAR, 0, TAG, MPI_COMM_WORLD, &stat);
+ // Bollking receive from rank 0 (master):
+ // Recieve dimention info
+ MPI_Recv(size, 2, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
+ int height = size[0];
+ int width = size[1];
+
+ //Recieve r/g/b input data
+ unsigned char rgbIn[height][width];
+ MPI_Recv(rgbIn, height*width, MPI_CHAR, 0, TAG, MPI_COMM_WORLD, &stat);
 
  
 
