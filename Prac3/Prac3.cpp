@@ -21,7 +21,6 @@
 // https://en.wikipedia.org/wiki/Message_Passing_Interface#Example_program
 //==============================================================================
 
-
 /** \mainpage Prac3 Main Page
  *
  * \section intro_sec Introduction
@@ -31,8 +30,6 @@
  * Look under the Files tab above to see documentation for particular files
  * in this project that have Doxygen comments.
  */
-
-
 
 //---------- STUDENT NUMBERS --------------------------------------------------
 //
@@ -61,7 +58,7 @@ void Master () {
  MPI_Status stat;    //! stat: Status of the MPI application
 
  // Read the input image
- if(!Input.Read("Data/greatwall.jpg")){
+ if(!Input.Read("Data/small.jpg")){
   printf("Cannot read image\n");
   return;
  }
@@ -100,7 +97,7 @@ void Master () {
  MPI_Send(size, 2, MPI_INT, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(size, 2, MPI_INT, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(size, 2, MPI_INT, 3, TAG, MPI_COMM_WORLD);
- printf("Sent dimention info.\n");
+ printf("Sent dimention info.");
 
  // Send partitioned data to slaves 1, 2, 3
  MPI_Send(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
@@ -109,17 +106,17 @@ void Master () {
  printf("Sent rgb data.\n");
 
  // Receive filtered data from slaves 1, 2, 3
- MPI_Recv(redsOut, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
- MPI_Recv(greensOut, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
- MPI_Recv(bluesOut, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);
 
  // Re-organise the RGB components into the output image rows
  for(int y = 0; y < Input.Height; y++){
   i = 0;
   for(int x = 0; x < Input.Width*Input.Components; x+=3){
-   Output.Rows[y][x] = redsOut[y][i];
-   Output.Rows[y][x+1] = greensOut[y][i];
-   Output.Rows[y][x+2] = bluesOut[y][i];
+   Output.Rows[y][x] = reds[y][i];
+   Output.Rows[y][x+1] = greens[y][i];
+   Output.Rows[y][x+2] = blues[y][i];
    i++;
   }
  }
@@ -151,11 +148,16 @@ void Slave(int ID){
  int height = size[0];
  int width = size[1];
 
- //Recieve r/g/b input data
- unsigned char rgbIn[height][width];
+ // Allocate memory for the incoming rgb data streams
+ unsigned char** rgbIn = new unsigned char*[height];
+ for(int i = 0; i < height; ++i)
+  rgbIn[i] = new unsigned char[width];
+
+ // Recieve r/g/b input data
  MPI_Recv(rgbIn, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD, &stat);
  printf("%d: Recieved rgb data.\n", ID);
 
+ // Allocate memory for the outgoining rgb data streams
  unsigned char** rgbOut = new unsigned char*[height];
  for(int i = 0; i < height; ++i)
   rgbOut[i] = new unsigned char[width];
@@ -165,21 +167,40 @@ void Slave(int ID){
  int margin = round(windowSize/2);
  int w, wStartX, wEndX, wStartY, wEndY;
 
+ bool checked = TRUE, checked2 = TRUE;
+//////////////////////////////////////////////////////////////////
+ printf("\nStarting test\n");
+ for(int y = 0; y < height-1; y++){
+  for(int x = 0; x < width-1; x++){
+   printf("\nLoopy\n");
+   rgbOut[y][x] = rgbIn[y][x];
+   printf("\n%d: x = %d:\n", ID, x);
+  }
+ }
+ printf("\n\n\n\nFINISHED SETTING\n\n\n\n\n\n");
+//////////////////////////////////////////////////////////////////
+
+/* printf("\nStarting filter.\n");
  for(int y = 0; y < margin; ++y){
 
   if(y < margin){
    wStartY = 0; wEndY = y + margin;
-  } else if(y > width-window){
+  } else if(y > width-margin){
    wStartY = y - margin; wEndY = height-1;
   } else{
    wStartY = y - margin; wEndY = y + margin;
+  }
+
+  if(checked){
+   printf("\nfirst loop\n");
+   checked = FALSE;
   }
 
   for(int x = 0; x < width; ++x){
 
    if(x < margin){
     wStartX = 0; wEndX = x + margin;
-   } else if(x > width-window){
+   } else if(x > width-margin){
     wStartX = x - margin; wEndX = width-1;
    } else{
     wStartX = x - margin; wEndX = x + margin;
@@ -188,14 +209,19 @@ void Slave(int ID){
    w = 0;
    for(int wy = wStartY; wy < wEndY; ++wy){
     for(int wx = wStartX; wx < wEndX; ++wx){
+
      window[w++] = rgbIn[wy][wx];
+     printf("\n%d: w = %d\n", ID, w);
+
     }
    }
 
-   sort(window, window + w);
+   printf("\n%d: Starting sort.\n", ID);
+   std::sort(window, window + w);
+   printf("\n%d: Finished sort.\n", ID);
    rgbOut[y][x] = window[w/2];
   }
- }
+ }*/
 
  // send to rank 0 (master):
  MPI_Send(rgbOut, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD);
