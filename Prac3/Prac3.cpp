@@ -109,20 +109,20 @@ void Master () {
  printf("Sent rgb data.\n");
 
  // Receive filtered data from slaves 1, 2, 3
- //MPI_Recv(redsOut, BUFSIZE, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
- //MPI_Recv(greensOut, BUFSIZE, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
- //MPI_Recv(bluesOut, BUFSIZE, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);        }}}}}}}}}}}}}}
+ MPI_Recv(redsOut, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(greensOut, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(bluesOut, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);
 
  // Re-organise the RGB components into the output image rows
- /*for(int y = 0; y < Input.Height; y++){
+ for(int y = 0; y < Input.Height; y++){
   i = 0;
   for(int x = 0; x < Input.Width*Input.Components; x+=3){
    Output.Rows[y][x] = redsOut[y][i];
-   Output.Rows[y][x+1] = redsOut[y][i];
+   Output.Rows[y][x+1] = greensOut[y][i];
    Output.Rows[y][x+2] = bluesOut[y][i];
    i++;
   }
- }*/               // }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+ }
 
  // Write the output image
  if(!Output.Write("Data/Output.jpg")){
@@ -138,7 +138,7 @@ void Master () {
 void Slave(int ID){
  char idstr[32];
  int size[2];
- int window = 30;
+ int windowSize = 30;
 
  MPI_Status stat;
 
@@ -156,9 +156,50 @@ void Slave(int ID){
  MPI_Recv(rgbIn, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD, &stat);
  printf("%d: Recieved rgb data.\n", ID);
 
+ unsigned char** rgbOut = new unsigned char*[height];
+ for(int i = 0; i < height; ++i)
+  rgbOut[i] = new unsigned char[width];
+
+ unsigned char* window = new unsigned char[windowSize*windowSize];
+
+ int margin = round(windowSize/2);
+ int w, wStartX, wEndX, wStartY, wEndY;
+
+ for(int y = 0; y < margin; ++y){
+
+  if(y < margin){
+   wStartY = 0; wEndY = y + margin;
+  } else if(y > width-window){
+   wStartY = y - margin; wEndY = height-1;
+  } else{
+   wStartY = y - margin; wEndY = y + margin;
+  }
+
+  for(int x = 0; x < width; ++x){
+
+   if(x < margin){
+    wStartX = 0; wEndX = x + margin;
+   } else if(x > width-window){
+    wStartX = x - margin; wEndX = width-1;
+   } else{
+    wStartX = x - margin; wEndX = x + margin;
+   }
+
+   w = 0;
+   for(int wy = wStartY; wy < wEndY; ++wy){
+    for(int wx = wStartX; wx < wEndX; ++wx){
+     window[w++] = rgbIn[wy][wx];
+    }
+   }
+
+   sort(window, window + w);
+   rgbOut[y][x] = window[w/2];
+  }
+ }
+
  // send to rank 0 (master):
- //MPI_Send(buff, BUFSIZE, MPI_CHAR, 0, TAG, MPI_COMM_WORLD);           }}}}}}}}}}}}}
- // End of "Hello World" example................................................
+ MPI_Send(rgbOut, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD);
+ printf("%d: Filtering complete, data sent back to master", ID);
 }
 //------------------------------------------------------------------------------
 

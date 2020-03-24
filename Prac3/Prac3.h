@@ -23,7 +23,7 @@
 #ifndef Prac3_h
 #define Prac3_h
 //------------------------------------------------------------------------------
-
+#include <algorithm>
 #include <mpi.h>
 #include <math.h>
 #include <stdio.h>
