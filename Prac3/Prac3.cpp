@@ -53,8 +53,6 @@
 void Master () {
  //! <h3>Local vars</h3>
  // The above outputs a heading to doxygen function entry
- int  j;             //! j: Loop counter
- char buff[BUFSIZE]; //! buff: Buffer for transferring message data
  MPI_Status stat;    //! stat: Status of the MPI application
 
  // Read the input image
@@ -72,7 +70,7 @@ void Master () {
  unsigned char** reds = new unsigned char*[height];
  unsigned char** greens = new unsigned char*[height];
  unsigned char** blues = new unsigned char*[height];
- for(int i = 0; i < height; ++i){
+ for(int i = 0; i < height; i++){
   reds[i] = new unsigned char[width];
   greens[i] = new unsigned char[width];
   blues[i] = new unsigned char[width];
@@ -97,18 +95,28 @@ void Master () {
  MPI_Send(size, 2, MPI_INT, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(size, 2, MPI_INT, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(size, 2, MPI_INT, 3, TAG, MPI_COMM_WORLD);
+ unsigned char* ack = new unsigned char[1];
+ MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
+ MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
+ MPI_Recv(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD,&stat);
  printf("Sent dimention info.");
 
  // Send partitioned data to slaves 1, 2, 3
  MPI_Send(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
+ MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
+ MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
+ MPI_Recv(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD,&stat);
  printf("Sent rgb data.\n");
 
  // Receive filtered data from slaves 1, 2, 3
  MPI_Recv(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
  MPI_Recv(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
  MPI_Recv(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Send(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD);
+ MPI_Send(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD);
+ MPI_Send(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD);
 
  // Re-organise the RGB components into the output image rows
  for(int y = 0; y < Input.Height; y++){
@@ -136,6 +144,8 @@ void Slave(int ID){
  char idstr[32];
  int size[2];
  int windowSize = 30;
+ unsigned char* ack = new unsigned char[1];
+ ack[0] = 'a';
 
  MPI_Status stat;
 
@@ -144,22 +154,24 @@ void Slave(int ID){
  // Bollking receive from rank 0 (master):
  // Recieve dimention info
  MPI_Recv(size, 2, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Send(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD);
  printf("%d: Recieved dimention info.\n", ID);
  int height = size[0];
  int width = size[1];
 
  // Allocate memory for the incoming rgb data streams
  unsigned char** rgbIn = new unsigned char*[height];
- for(int i = 0; i < height; ++i)
+ for(int i = 0; i < height; i++)
   rgbIn[i] = new unsigned char[width];
 
  // Recieve r/g/b input data
  MPI_Recv(rgbIn, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Send(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD);
  printf("%d: Recieved rgb data.\n", ID);
 
  // Allocate memory for the outgoining rgb data streams
  unsigned char** rgbOut = new unsigned char*[height];
- for(int i = 0; i < height; ++i)
+ for(int i = 0; i < height; i++)
   rgbOut[i] = new unsigned char[width];
 
  unsigned char* window = new unsigned char[windowSize*windowSize];
@@ -169,10 +181,10 @@ void Slave(int ID){
 
  bool checked = TRUE, checked2 = TRUE;
 //////////////////////////////////////////////////////////////////
- printf("\nStarting test\n");
+ printf("\n%d: Starting test\n", ID);
  for(int y = 0; y < height-1; y++){
   for(int x = 0; x < width-1; x++){
-   printf("\nLoopy\n");
+   printf("\n%d: Loopy\n", ID);
    rgbOut[y][x] = rgbIn[y][x];
    printf("\n%d: x = %d:\n", ID, x);
   }
@@ -225,6 +237,7 @@ void Slave(int ID){
 
  // send to rank 0 (master):
  MPI_Send(rgbOut, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD);
+ MPI_Recv(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD,&stat);
  printf("%d: Filtering complete, data sent back to master", ID);
 }
 //------------------------------------------------------------------------------
