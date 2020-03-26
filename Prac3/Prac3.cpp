@@ -67,14 +67,18 @@ void Master () {
  // Allocate memory for variables to store the partitioned RGB components
  int height = Input.Height;
  int width = Input.Width*Input.Components/3;
- unsigned char** reds = new unsigned char*[height];     // Red elements; to be sent to pracessor #1
+ /*unsigned char** reds = new unsigned char*[height];     // Red elements; to be sent to pracessor #1
  unsigned char** greens = new unsigned char*[height];       // Green elements; to be sent to pracessor #2
  unsigned char** blues = new unsigned char*[height];        // Blue elements; to be sent to pracessor #3
  for(int i = 0; i < height; i++){
-  reds[i] = new unsigned char[width];
+  //reds[i] = new unsigned char[width];
   greens[i] = new unsigned char[width];
   blues[i] = new unsigned char[width];
- }
+ }*/
+ printf("now?");
+ unsigned char reds[height][width];
+ unsigned char greens[height][width];
+ unsigned char blues[height][width];
 
  // ____________Partitioning________________
  // Itterate through rows of the input image
@@ -90,12 +94,7 @@ void Master () {
   }
  }
 
- for(int y = 0; y < height; y++){
-  for(int x = 0; x < width; x++){
-   printf("%u\t", reds[y][x]);
-  }
-  printf("\n");
- }
+ printf("\nreds: %d x %d\n", (int)(sizeof(reds)/sizeof(reds[0])), (int)(sizeof(reds[0])/sizeof(unsigned char)));
 
  // Send dimention info to slaves
  int size[2] = {height, width};
@@ -112,21 +111,23 @@ void Master () {
  MPI_Send(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
- printf("\nreds: %d x %d\n", sizeof(reds)/sizeof(reds[0]), sizeof(reds[0])/sizeof(unsigned char));
- delete [] reds; delete [] greens; delete [] blues;
+ //delete [] reds; delete [] greens; delete [] blues;
  MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD,&stat);
  printf("Sent rgb data.\n");
 
- unsigned char** redsF = new unsigned char*[height];     // Red elements; to be sent to pracessor #1
+ /*unsigned char** redsF = new unsigned char*[height];     // Red elements; to be sent to pracessor #1
  unsigned char** greensF = new unsigned char*[height];       // Green elements; to be sent to pracessor #2
  unsigned char** bluesF = new unsigned char*[height];        // Blue elements; to be sent to pracessor #3
  for(int i = 0; i < height; i++){
   redsF[i] = new unsigned char[width];
   greensF[i] = new unsigned char[width];
   bluesF[i] = new unsigned char[width];
- }
+ }*/
+ unsigned char redsF[height][width];
+ unsigned char greensF[height][width];
+ unsigned char bluesF[height][width];
 
  // Receive filtered data from slaves 1, 2, 3
  MPI_Recv(redsF, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
@@ -138,6 +139,7 @@ void Master () {
  delete [] ack;
 
  // Re-organise the RGB components into the output image rows
+ printf("Compiling output image.");
  for(int y = 0; y < Input.Height; y++){
   i = 0;
   for(int x = 0; x < Input.Width*Input.Components; x+=3){
@@ -147,14 +149,16 @@ void Master () {
    i++;
   }
  }
+ printf("Finished compiling output image.");
 
- delete [] redsF; delete [] greensF; delete [] bluesF;
+ //delete [] redsF; delete [] greensF; delete [] bluesF;
 
  // Write the output image
  if(!Output.Write("Data/Output.jpg")){
   printf("Cannot write image\n");
   return;
  }
+ printf("Written to output.");
  //! <h3>Output</h3> The file Output.jpg will be created on success to save
  //! the processed output.
 }
@@ -165,7 +169,7 @@ void Slave(int ID){
  char idstr[32];
  int size[2];
  int windowSize = 30;
- unsigned char* ack = new unsigned char[1];
+ unsigned char ack[1];
  ack[0] = 'a';
 
  MPI_Status stat;
@@ -181,21 +185,22 @@ void Slave(int ID){
  int width = size[1];
 
  // Allocate memory for the incoming rgb data streams
- unsigned char** rgbIn = new unsigned char*[height];
- for(int i = 0; i < height; i++)
-  rgbIn[i] = new unsigned char[width];
-
+ //unsigned char** rgbIn = new unsigned char*[height];
+ //for(int i = 0; i < height; i++)
+  //rgbIn[i] = new unsigned char[width];
+ unsigned char rgbIn[height][width];
  // Recieve r/g/b input data
  MPI_Recv(rgbIn, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD, &stat);
  MPI_Send(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD);
  printf("%d: Recieved rgb data.\n", ID);
 
  // Allocate memory for the outgoining rgb data streams
- unsigned char** rgbOut = new unsigned char*[height];
- for(int i = 0; i < height; i++)
-  rgbOut[i] = new unsigned char[width];
+ //unsigned char** rgbOut = new unsigned char*[height];
+ //for(int i = 0; i < height; i++)
+  //rgbOut[i] = new unsigned char[width];
+ unsigned char rgbOut[height][width];
 
- unsigned char* window = new unsigned char[windowSize*windowSize];
+ unsigned char window[windowSize*windowSize];
 
  int margin = round(windowSize/2);
  int w, wStartX, wEndX, wStartY, wEndY;
@@ -203,7 +208,7 @@ void Slave(int ID){
  bool checked = TRUE, checked2 = TRUE;
 //////////////////////////////////////////////////////////////////
  printf("\n%d: Starting test\n", ID);
- printf("\nrgbIn: %d x %d\n", sizeof(rgbIn)/sizeof(rgbIn[0]), sizeof(rgbIn[0])/sizeof(unsigned char));
+ printf("\n%d: rgbIn: %d x %d\n", ID, sizeof(rgbIn)/sizeof(rgbIn[0]), sizeof(rgbIn[0])/sizeof(unsigned char));
  for(int y = 0; y < height; y++){
   for(int x = 0; x < width; x++){
    //printf("\n%d: Loopy\n", ID);
@@ -211,7 +216,7 @@ void Slave(int ID){
    //printf("\n%d: x = %d:\n", ID, x);
   }
  }
- printf("\n\n\n\nFINISHED SETTING\n\n\n\n\n\n");
+ printf("\n%d: FINISHED SETTING\n", ID);
 //////////////////////////////////////////////////////////////////
 
 /* printf("\nStarting filter.\n");
@@ -258,12 +263,15 @@ void Slave(int ID){
  }*/
 
  // send to rank 0 (master):
- delete [] window; delete rgbIn;
+ //delete [] window; //delete rgbIn;
+ printf("%d: Sending rgbOut.", ID);
  MPI_Send(rgbOut, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD);
- delete [] rgbOut;
+ printf("%d: Sent rgbOut.", ID);
+
+ // delete [] rgbOut;
  MPI_Recv(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD,&stat);
  printf("%d: Filtering complete, data sent back to master", ID);
- delete [] ack;
+ //delete [] ack;
 }
 //------------------------------------------------------------------------------
 
