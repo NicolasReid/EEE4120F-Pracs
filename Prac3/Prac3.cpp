@@ -56,7 +56,7 @@ void Master () {
  MPI_Status stat;    //! stat: Status of the MPI application
 
  // Read the input image
- if(!Input.Read("Data/fly.jpg")){
+ if(!Input.Read("Data/small.jpg")){
   printf("Cannot read image\n");
   return;
  }
@@ -66,21 +66,22 @@ void Master () {
 
  // Allocate memory for variables to store the partitioned RGB components
  int height = Input.Height;
- int width = Input.Width*Input.Components/3;
- /*unsigned char** reds = new unsigned char*[height];     // Red elements; to be sent to pracessor #1
- unsigned char** greens = new unsigned char*[height];       // Green elements; to be sent to pracessor #2
- unsigned char** blues = new unsigned char*[height];        // Blue elements; to be sent to pracessor #3
- for(int i = 0; i < height; i++){
-  //reds[i] = new unsigned char[width];
-  greens[i] = new unsigned char[width];
-  blues[i] = new unsigned char[width];
- }*/
- printf("now?");
+ int width = Input.Width;
  unsigned char reds[height][width];
  unsigned char greens[height][width];
  unsigned char blues[height][width];
 
- // ____________Partitioning________________
+ // Send dimention info to slaves
+ int size[2] = {height, width};
+ MPI_Send(size, 2, MPI_INT, 1, TAG, MPI_COMM_WORLD);
+ MPI_Send(size, 2, MPI_INT, 2, TAG, MPI_COMM_WORLD);
+ MPI_Send(size, 2, MPI_INT, 3, TAG, MPI_COMM_WORLD);
+ unsigned char ack[1];
+ MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
+ MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
+ MPI_Recv(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD,&stat);
+
+ // Partitioning
  // Itterate through rows of the input image
  int i;
  for(int y = 0; y < Input.Height; y++){
@@ -94,37 +95,15 @@ void Master () {
   }
  }
 
- printf("\nreds: %d x %d\n", (int)(sizeof(reds)/sizeof(reds[0])), (int)(sizeof(reds[0])/sizeof(unsigned char)));
-
- // Send dimention info to slaves
- int size[2] = {height, width};
- MPI_Send(size, 2, MPI_INT, 1, TAG, MPI_COMM_WORLD);
- MPI_Send(size, 2, MPI_INT, 2, TAG, MPI_COMM_WORLD);
- MPI_Send(size, 2, MPI_INT, 3, TAG, MPI_COMM_WORLD);
- unsigned char* ack = new unsigned char[1];
- MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
- MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
- MPI_Recv(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD,&stat);
- printf("Sent dimention info.");
-
- // Send partitioned data to slaves 1, 2, 3
+ // Send partitioned RGB data to slaves 1, 2, 3 respectively
  MPI_Send(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
- //delete [] reds; delete [] greens; delete [] blues;
  MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD,&stat);
- printf("Sent rgb data.\n");
 
- /*unsigned char** redsF = new unsigned char*[height];     // Red elements; to be sent to pracessor #1
- unsigned char** greensF = new unsigned char*[height];       // Green elements; to be sent to pracessor #2
- unsigned char** bluesF = new unsigned char*[height];        // Blue elements; to be sent to pracessor #3
- for(int i = 0; i < height; i++){
-  redsF[i] = new unsigned char[width];
-  greensF[i] = new unsigned char[width];
-  bluesF[i] = new unsigned char[width];
- }*/
+ // Set aside memory space for incoming (filtered) RGB data
  unsigned char redsF[height][width];
  unsigned char greensF[height][width];
  unsigned char bluesF[height][width];
@@ -136,10 +115,8 @@ void Master () {
  MPI_Send(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD);
  MPI_Send(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD);
  MPI_Send(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD);
- delete [] ack;
 
  // Re-organise the RGB components into the output image rows
- printf("Compiling output image.");
  for(int y = 0; y < Input.Height; y++){
   i = 0;
   for(int x = 0; x < Input.Width*Input.Components; x+=3){
@@ -149,26 +126,23 @@ void Master () {
    i++;
   }
  }
- printf("Finished compiling output image.");
 
- //delete [] redsF; delete [] greensF; delete [] bluesF;
-
- // Write the output image
+ // Write results to the output image jpg file
  if(!Output.Write("Data/Output.jpg")){
   printf("Cannot write image\n");
   return;
  }
- printf("Written to output.");
+
  //! <h3>Output</h3> The file Output.jpg will be created on success to save
  //! the processed output.
 }
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------END MASTER
 
 /** This is the Slave function, the workers of this MPI application. */
 void Slave(int ID){
  char idstr[32];
  int size[2];
- int windowSize = 4;
+ int windowSize = 10;
  unsigned char ack[1];
  ack[0] = 'a';
 
@@ -176,83 +150,70 @@ void Slave(int ID){
 
  printf("Processor %d reporting for duty.\n", ID);
 
- // Bollking receive from rank 0 (master):
+ // Blocking receive from rank 0 (master):
  // Recieve dimention info
  MPI_Recv(size, 2, MPI_INT, 0, TAG, MPI_COMM_WORLD, &stat);
  MPI_Send(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD);
- printf("%d: Recieved dimention info.\n", ID);
  int height = size[0];
  int width = size[1];
 
  // Allocate memory for the incoming rgb data streams
- //unsigned char** rgbIn = new unsigned char*[height];
- //for(int i = 0; i < height; i++)
-  //rgbIn[i] = new unsigned char[width];
  unsigned char rgbIn[height][width];
+
  // Recieve r/g/b input data
  MPI_Recv(rgbIn, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD, &stat);
  MPI_Send(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD);
- printf("%d: Recieved rgb data.\n", ID);
 
- // Allocate memory for the outgoining rgb data streams
- //unsigned char** rgbOut = new unsigned char*[height];
- //for(int i = 0; i < height; i++)
-  //rgbOut[i] = new unsigned char[width];
+ // Allocate memory for the outgoining rgb data streams and temporary window array
  unsigned char rgbOut[height][width];
-
  unsigned char window[windowSize*windowSize];
 
  int margin = round(windowSize/2);
  int w, wStartX, wEndX, wStartY, wEndY;
 
- bool checked = TRUE, checked2 = TRUE;
-
- printf("\nStarting filter.\n");
+ // Median filter
+ // Loop through all rows in image
  for(int y = 0; y < height; ++y){
 
-  if(y < margin){
+  if(y < margin){       // Case: upper rows of pixel components within margin
    wStartY = 0; wEndY = y + margin;
-  } else if(y > width-margin){
+  } else if(y > width-margin){      // Case: lower rows of components within margin
    wStartY = y - margin; wEndY = height-1;
-  } else{
+  } else{       // Case: all rows within vertical margin boundaries
    wStartY = y - margin; wEndY = y + margin;
   }
 
+  // Loop through each pixel component in a row y
   for(int x = 0; x < width; ++x){
 
-   if(x < margin){
+   if(x < margin){      // Case: left most pixel components within margin
     wStartX = 0; wEndX = x + margin;
-   } else if(x > width-margin){
+   } else if(x > width-margin){     // Case: right most pixel components within margin
     wStartX = x - margin; wEndX = width-1;
-   } else{
+   } else{      // Case: all component elements which fall within margins
     wStartX = x - margin; wEndX = x + margin;
    }
 
-   w = 0;
+   w = 0;       // 1D Window array counter
+   // Populate window array with pixel components in windowSize-by-windowSize surrounding area
    for(int wy = wStartY; wy < wEndY; ++wy){
     for(int wx = wStartX; wx < wEndX; ++wx){
      window[w++] = rgbIn[wy][wx];
     }
    }
 
-   std::sort(window, window + w);
+   std::sort(window, window + w);       // Sort window array elements
 
-   rgbOut[y][x] = window[w/2];
+   rgbOut[y][x] = window[w/2];      // Write the median (middle positioned) element to the output
   }
  }
 
- // send to rank 0 (master):
- //delete [] window; //delete rgbIn;
- printf("%d: Sending rgbOut.", ID);
+ // Send filtered results back to rank 0 (master):
  MPI_Send(rgbOut, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD);
- printf("%d: Sent rgbOut.", ID);
-
- // delete [] rgbOut;
  MPI_Recv(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD,&stat);
- printf("%d: Filtering complete, data sent back to master", ID);
- //delete [] ack;
+
 }
-//------------------------------------------------------------------------------
+//---------------------------------------------------------------------END SLAVE
 
 /** This is the entry point to the program. */
 int main(int argc, char** argv){
