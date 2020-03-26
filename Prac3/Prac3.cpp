@@ -168,7 +168,7 @@ void Master () {
 void Slave(int ID){
  char idstr[32];
  int size[2];
- int windowSize = 30;
+ int windowSize = 10;
  unsigned char ack[1];
  ack[0] = 'a';
 
@@ -230,11 +230,6 @@ void Slave(int ID){
    wStartY = y - margin; wEndY = y + margin;
   }
 
-  if(checked){
-   //printf("\nfirst loop\n");
-   checked = FALSE;
-  }
-
   for(int x = 0; x < width; ++x){
 
    if(x < margin){
@@ -256,7 +251,20 @@ void Slave(int ID){
    }
 
    //printf("\n%d: Starting sort.\n", ID);
+   if(y == 100 && x == 150){
+    printf("\nUnsorted:\n");
+    for(int i = 0; i < w; i++){
+     printf("%u\t", window[i]);
+    }
+   }
    std::sort(window, window + w);
+   if(y == 100 && x == 150){
+    printf("\nUnsorted:\n");
+    for(int i = 0; i < w; i++){
+     printf("%u\t", window[i]);
+    }
+    checked = FALSE;
+   }
    //printf("\n%d: Finished sort.\n", ID);
    rgbOut[y][x] = window[w/2];
   }
