@@ -168,7 +168,7 @@ void Master () {
 void Slave(int ID){
  char idstr[32];
  int size[2];
- int windowSize = 10;
+ int windowSize = 4;
  unsigned char ack[1];
  ack[0] = 'a';
 
@@ -206,18 +206,6 @@ void Slave(int ID){
  int w, wStartX, wEndX, wStartY, wEndY;
 
  bool checked = TRUE, checked2 = TRUE;
-/*
- printf("\n%d: Starting test\n", ID);
- printf("\n%d: rgbIn: %d x %d\n", ID, sizeof(rgbIn)/sizeof(rgbIn[0]), sizeof(rgbIn[0])/sizeof(unsigned char));
- for(int y = 0; y < height; y++){
-  for(int x = 0; x < width; x++){
-   //printf("\n%d: Loopy\n", ID);
-   rgbOut[y][x] = rgbIn[y][x];
-   //printf("\n%d: x = %d:\n", ID, x);
-  }
- }
- printf("\n%d: FINISHED SETTING\n", ID);
-*/
 
  printf("\nStarting filter.\n");
  for(int y = 0; y < height; ++y){
@@ -243,10 +231,7 @@ void Slave(int ID){
    w = 0;
    for(int wy = wStartY; wy < wEndY; ++wy){
     for(int wx = wStartX; wx < wEndX; ++wx){
-
      window[w++] = rgbIn[wy][wx];
-     //printf("\n%d: w = %d\n", ID, w);
-
     }
    }
 
