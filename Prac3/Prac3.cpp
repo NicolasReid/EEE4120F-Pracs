@@ -89,7 +89,13 @@ void Master () {
    i++;
   }
  }
- printf("Partitioning complete.\n");
+
+ for(int y = 0; y < height; y++){
+  for(int x = 0; x < width; x++){
+   printf("%u\t", reds[y][x]);
+  }
+  printf("\n");
+ }
 
  // Send dimention info to slaves
  int size[2] = {height, width};
@@ -106,29 +112,43 @@ void Master () {
  MPI_Send(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
+ printf("\nreds: %d x %d\n", sizeof(reds)/sizeof(reds[0]), sizeof(reds[0])/sizeof(unsigned char));
+ delete [] reds; delete [] greens; delete [] blues;
  MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD,&stat);
  printf("Sent rgb data.\n");
 
+ unsigned char** redsF = new unsigned char*[height];     // Red elements; to be sent to pracessor #1
+ unsigned char** greensF = new unsigned char*[height];       // Green elements; to be sent to pracessor #2
+ unsigned char** bluesF = new unsigned char*[height];        // Blue elements; to be sent to pracessor #3
+ for(int i = 0; i < height; i++){
+  redsF[i] = new unsigned char[width];
+  greensF[i] = new unsigned char[width];
+  bluesF[i] = new unsigned char[width];
+ }
+
  // Receive filtered data from slaves 1, 2, 3
- MPI_Recv(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
- MPI_Recv(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
- MPI_Recv(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(redsF, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(greensF, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD, &stat);
+ MPI_Recv(bluesF, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD, &stat);
  MPI_Send(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD);
  MPI_Send(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD);
  MPI_Send(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD);
+ delete [] ack;
 
  // Re-organise the RGB components into the output image rows
  for(int y = 0; y < Input.Height; y++){
   i = 0;
   for(int x = 0; x < Input.Width*Input.Components; x+=3){
-   Output.Rows[y][x] = reds[y][i];
-   Output.Rows[y][x+1] = greens[y][i];
-   Output.Rows[y][x+2] = blues[y][i];
+   Output.Rows[y][x] = redsF[y][i];
+   Output.Rows[y][x+1] = greensF[y][i];
+   Output.Rows[y][x+2] = bluesF[y][i];
    i++;
   }
  }
+
+ delete [] redsF; delete [] greensF; delete [] bluesF;
 
  // Write the output image
  if(!Output.Write("Data/Output.jpg")){
@@ -183,11 +203,12 @@ void Slave(int ID){
  bool checked = TRUE, checked2 = TRUE;
 //////////////////////////////////////////////////////////////////
  printf("\n%d: Starting test\n", ID);
- for(int y = 0; y < height-1; y++){
-  for(int x = 0; x < width-1; x++){
-   printf("\n%d: Loopy\n", ID);
+ printf("\nrgbIn: %d x %d\n", sizeof(rgbIn)/sizeof(rgbIn[0]), sizeof(rgbIn[0])/sizeof(unsigned char));
+ for(int y = 0; y < height; y++){
+  for(int x = 0; x < width; x++){
+   //printf("\n%d: Loopy\n", ID);
    rgbOut[y][x] = rgbIn[y][x];
-   printf("\n%d: x = %d:\n", ID, x);
+   //printf("\n%d: x = %d:\n", ID, x);
   }
  }
  printf("\n\n\n\nFINISHED SETTING\n\n\n\n\n\n");
@@ -237,9 +258,12 @@ void Slave(int ID){
  }*/
 
  // send to rank 0 (master):
+ delete [] window; delete rgbIn;
  MPI_Send(rgbOut, height*width, MPI_BYTE, 0, TAG, MPI_COMM_WORLD);
+ delete [] rgbOut;
  MPI_Recv(ack,1,MPI_BYTE,0,TAG,MPI_COMM_WORLD,&stat);
  printf("%d: Filtering complete, data sent back to master", ID);
+ delete [] ack;
 }
 //------------------------------------------------------------------------------
 
