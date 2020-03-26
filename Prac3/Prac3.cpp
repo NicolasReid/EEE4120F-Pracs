@@ -142,9 +142,10 @@ void Master () {
 void Slave(int ID){
  char idstr[32];
  int size[2];
- int windowSize = 10;
  unsigned char ack[1];
- ack[0] = 'a';
+ ack[0] = 'a';      // Arbitrary acknowlage message?
+
+ int windowSize = 3;        // Set window size
 
  MPI_Status stat;
 
