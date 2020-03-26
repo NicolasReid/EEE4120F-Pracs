@@ -220,7 +220,7 @@ void Slave(int ID){
 */
 
  printf("\nStarting filter.\n");
- for(int y = 0; y < margin; ++y){
+ for(int y = 0; y < height; ++y){
 
   if(y < margin){
    wStartY = 0; wEndY = y + margin;
@@ -257,7 +257,9 @@ void Slave(int ID){
      printf("%u\t", window[i]);
     }
    }
+
    std::sort(window, window + w);
+
    if(y == 100 && x == 150){
     printf("\nUnsorted:\n");
     for(int i = 0; i < w; i++){
