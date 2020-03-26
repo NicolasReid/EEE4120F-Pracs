@@ -67,20 +67,21 @@ void Master () {
  // Allocate memory for variables to store the partitioned RGB components
  int height = Input.Height;
  int width = Input.Width*Input.Components/3;
- unsigned char** reds = new unsigned char*[height];
- unsigned char** greens = new unsigned char*[height];
- unsigned char** blues = new unsigned char*[height];
+ unsigned char** reds = new unsigned char*[height];     // Red elements; to be sent to pracessor #1
+ unsigned char** greens = new unsigned char*[height];       // Green elements; to be sent to pracessor #2
+ unsigned char** blues = new unsigned char*[height];        // Blue elements; to be sent to pracessor #3
  for(int i = 0; i < height; i++){
   reds[i] = new unsigned char[width];
   greens[i] = new unsigned char[width];
   blues[i] = new unsigned char[width];
  }
 
+ // ____________Partitioning________________
  // Itterate through rows of the input image
  int i;
  for(int y = 0; y < Input.Height; y++){
-  // Run through RGB pixel elements in each row and separate the components
   i = 0;
+  // Run through RGB pixel elements in each row and separate the components
   for(int x = 0; x < Input.Width*Input.Components; x+=3){
    reds[y][i] = Input.Rows[y][x];
    greens[y][i] = Input.Rows[y][x+1];
