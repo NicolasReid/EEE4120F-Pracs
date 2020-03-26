@@ -56,7 +56,7 @@ void Master () {
  MPI_Status stat;    //! stat: Status of the MPI application
 
  // Read the input image
- if(!Input.Read("Data/small.jpg")){
+ if(!Input.Read("Data/fly.jpg")){
   printf("Cannot read image\n");
   return;
  }
@@ -250,24 +250,8 @@ void Slave(int ID){
     }
    }
 
-   //printf("\n%d: Starting sort.\n", ID);
-   if(y == 100 && x == 150){
-    printf("\nUnsorted:\n");
-    for(int i = 0; i < w; i++){
-     printf("%u\t", window[i]);
-    }
-   }
-
    std::sort(window, window + w);
 
-   if(y == 100 && x == 150){
-    printf("\nUnsorted:\n");
-    for(int i = 0; i < w; i++){
-     printf("%u\t", window[i]);
-    }
-    checked = FALSE;
-   }
-   //printf("\n%d: Finished sort.\n", ID);
    rgbOut[y][x] = window[w/2];
   }
  }
