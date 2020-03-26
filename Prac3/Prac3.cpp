@@ -206,7 +206,7 @@ void Slave(int ID){
  int w, wStartX, wEndX, wStartY, wEndY;
 
  bool checked = TRUE, checked2 = TRUE;
-//////////////////////////////////////////////////////////////////
+/*
  printf("\n%d: Starting test\n", ID);
  printf("\n%d: rgbIn: %d x %d\n", ID, sizeof(rgbIn)/sizeof(rgbIn[0]), sizeof(rgbIn[0])/sizeof(unsigned char));
  for(int y = 0; y < height; y++){
@@ -217,9 +217,9 @@ void Slave(int ID){
   }
  }
  printf("\n%d: FINISHED SETTING\n", ID);
-//////////////////////////////////////////////////////////////////
+*/
 
-/* printf("\nStarting filter.\n");
+ printf("\nStarting filter.\n");
  for(int y = 0; y < margin; ++y){
 
   if(y < margin){
@@ -231,7 +231,7 @@ void Slave(int ID){
   }
 
   if(checked){
-   printf("\nfirst loop\n");
+   //printf("\nfirst loop\n");
    checked = FALSE;
   }
 
@@ -250,17 +250,17 @@ void Slave(int ID){
     for(int wx = wStartX; wx < wEndX; ++wx){
 
      window[w++] = rgbIn[wy][wx];
-     printf("\n%d: w = %d\n", ID, w);
+     //printf("\n%d: w = %d\n", ID, w);
 
     }
    }
 
-   printf("\n%d: Starting sort.\n", ID);
+   //printf("\n%d: Starting sort.\n", ID);
    std::sort(window, window + w);
-   printf("\n%d: Finished sort.\n", ID);
+   //printf("\n%d: Finished sort.\n", ID);
    rgbOut[y][x] = window[w/2];
   }
- }*/
+ }
 
  // send to rank 0 (master):
  //delete [] window; //delete rgbIn;
