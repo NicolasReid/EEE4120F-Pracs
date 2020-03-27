@@ -47,7 +47,7 @@
 
 // Includes needed for the program
 #include "Prac3.h"
-
+#include <time.h>
 /** This is the master node function, describing the operations
     that the master will be doing */
 void Master () {
@@ -135,6 +135,8 @@ void Master () {
   return;
  }
 
+ printf("\nFinished. Result written to Output.jpg\n");
+
  //! <h3>Output</h3> The file Output.jpg will be created on success to save
  //! the processed output.
 }
@@ -147,7 +149,7 @@ void Slave(int ID){
  unsigned char ack[1];
  ack[0] = 'a';      // Arbitrary acknowlage message?
 
- int windowSize = 50;        // Set window size
+ int windowSize = 24;        // Set window size
 
  MPI_Status stat;
 
@@ -220,6 +222,13 @@ void Slave(int ID){
 
 /** This is the entry point to the program. */
 int main(int argc, char** argv){
+
+ clock_t start, end;
+ double cpu_time_used;
+
+ // Start timing
+ start = clock();
+
  int myid;
 
  // MPI programs start with MPI_Init
@@ -239,6 +248,12 @@ int main(int argc, char** argv){
 
  // MPI programs end with MPI_Finalize
  MPI_Finalize();
+
+ end = clock();
+ cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+ if(myid == 0)
+  printf("\nTime lapsed: %f seconds\n", cpu_time_used);
+
  return 0;
 }
 //------------------------------------------------------------------------------
