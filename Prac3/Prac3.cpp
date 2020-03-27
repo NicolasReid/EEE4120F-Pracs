@@ -67,15 +67,16 @@ void Master () {
  // Allocate memory for variables to store the partitioned RGB components
  int height = Input.Height;
  int width = Input.Width;
- unsigned char reds[height][width];
- unsigned char greens[height][width];
- unsigned char blues[height][width];
+ unsigned char reds[height][width];     // Red elements; to be sent to node #1
+ unsigned char greens[height][width];       // Green elements; to be sent to node #1
+ unsigned char blues[height][width];        // Blue elements; to be sent to node #1
 
  // Send dimention info to slaves
  int size[2] = {height, width};
  MPI_Send(size, 2, MPI_INT, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(size, 2, MPI_INT, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(size, 2, MPI_INT, 3, TAG, MPI_COMM_WORLD);
+ // Receive acknowledgement that message was recieved
  unsigned char ack[1];
  MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
@@ -99,6 +100,7 @@ void Master () {
  MPI_Send(reds, height*width, MPI_BYTE, 1, TAG, MPI_COMM_WORLD);
  MPI_Send(greens, height*width, MPI_BYTE, 2, TAG, MPI_COMM_WORLD);
  MPI_Send(blues, height*width, MPI_BYTE, 3, TAG, MPI_COMM_WORLD);
+ // Receive acknowledgement that message was recieved
  MPI_Recv(ack,1,MPI_BYTE,1,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,2,TAG,MPI_COMM_WORLD,&stat);
  MPI_Recv(ack,1,MPI_BYTE,3,TAG,MPI_COMM_WORLD,&stat);
@@ -145,7 +147,7 @@ void Slave(int ID){
  unsigned char ack[1];
  ack[0] = 'a';      // Arbitrary acknowlage message?
 
- int windowSize = 3;        // Set window size
+ int windowSize = 50;        // Set window size
 
  MPI_Status stat;
 
